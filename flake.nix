@@ -72,11 +72,14 @@
             systemd.services.mirage = {
               description = "Mirage Service with dynamic file detection";
               wantedBy = [ "multi-user.target" ];
+
+              bindsTo = [ "systemd-tmpfiles-setup.service" ];
+              partOf = [ "systemd-tmpfiles-setup.service" ];
+
               serviceConfig = {
                 ExecStart = "${mirageScript}";
                 Restart = "always";
               };
-              restartTriggers = [ (builtins.currentTime) ];
             };
 
             sops.mirage.placeholder = mapAttrs (
