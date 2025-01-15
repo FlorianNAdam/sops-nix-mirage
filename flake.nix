@@ -36,17 +36,17 @@
           mirageScript = pkgs.writeShellScript "mirage-dynamic-service" ''
             #!/usr/bin/env bash
 
-             files=()
-             ${rgCommand} | while read -r path; do
-               echo "Found file: $path"
-               files+=("$path")
-             done
+            files=()
+            while read -r path; do
+              echo "Found file: $path"
+              files+=("$path")
+            done < <(${rgCommand})
 
-             echo "Starting Mirage for files: ''${files[@]}"
-             ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "''${files[@]}" \
-               --shell ${pkgs.bash}/bin/sh \
-               ${lib.concatMapStringsSep " " (r: "--replace-exec '" + r + "'") mirageArgs} \
-               --allow-other
+            echo "Starting Mirage for files: ''${files[@]}"
+            ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "''${files[@]}" \
+              --shell ${pkgs.bash}/bin/sh \
+              ${lib.concatMapStringsSep " " (r: "--replace-exec '" + r + "'") mirageArgs} \
+              --allow-other
           '';
         in
         {
