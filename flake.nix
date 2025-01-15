@@ -10,38 +10,27 @@
     };
   };
 
-  outputs =
+  outputs = { self, nixpkgs, ... }:
     {
-      self,
-      nixpkgs,
-      mirage,
-      ...
-    }:
-    {
-      nixosModules.mirage =
-        {
-          config,
-          pkgs,
-          lib,
-          ...
-        }:
+      nixosModules.mirage = { config, pkgs, lib, ... }:
         with lib;
         let
-          package = mirage.defaultPackage.${pkgs.system};
-
           rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER' /run/current-system";
 
           mirageArgs = mapAttrsToList (
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
           ) config.sops.secrets;
 
-          mirageReplaceArgs = lib.concatMapStringsSep " " (r: "--replace-regex \"" + r + "\"") mirageArgs;
-
-          mirageExec = lib.concatStringsSep " " [
-            "${pkgs.bash}/bin/bash"
-            "-c"
-            "\"${rgCommand} | while read -r path; do ${package}/bin/mirage $path --shell ${pkgs.bash}/bin/sh ${mirageReplaceArgs} --allow-other; done\""
-          ];
+          mirageScript = pkgs.writeShellScript "mirage-dynamic-service" ''
+            #!/usr/bin/env bash
+            ${rgCommand} | while read -r path; do
+              ${self.packages.${pkgs.system}.mirage}/bin/mirage "$path" \
+                --shell ${pkgs.bash}/bin/sh \
+                ${lib.concatMapStringsSep ' ' (r: '--replace-regex "' + r + '"') mirageArgs} \
+                ${lib.concatMapStringsSep ' ' (r: '--replace-exec "' + r + '"') mirageArgs} \
+                --allow-other
+            done
+          '';
         in
         {
           options.sops.mirage = {
@@ -66,7 +55,7 @@
               description = "Mirage Service with dynamic file detection";
               wantedBy = [ "multi-user.target" ];
               serviceConfig = {
-                ExecStart = mirageExec;
+                ExecStart = "${mirageScript}";
                 Restart = "always";
               };
             };
