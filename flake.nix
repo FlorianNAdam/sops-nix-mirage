@@ -28,7 +28,7 @@
         with lib;
         let
           rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER' /run/current-system";
-          rgCommand2 = "${pkgs.ripgrep}/bin/rg -L -l --hidden --no-messages 'MIRAGE_PLACEHOLDER' ~/.local/state/nix/profiles/";
+          rgCommand2 = "${pkgs.ripgrep}/bin/rg -L -l --hidden --no-messages 'MIRAGE_PLACEHOLDER'";
 
           mirageArgs = mapAttrsToList (
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
@@ -58,7 +58,7 @@
                   resolved_path=$(readlink -f "$path")
                   echo "Found file: $resolved_path"
                   files+=("$resolved_path")
-                done < <(${rgCommand2})
+                done < <(${rgCommand2} $user_home/.local/state/nix/profiles)
 
               fi
             done
