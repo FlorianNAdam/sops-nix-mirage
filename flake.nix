@@ -11,7 +11,12 @@
   };
 
   outputs =
-    { self, nixpkgs, ... }:
+    {
+      self,
+      inputs,
+      nixpkgs,
+      ...
+    }:
     {
       nixosModules.mirage =
         {
