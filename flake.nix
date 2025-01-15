@@ -11,7 +11,12 @@
   };
 
   outputs =
-    { self, nixpkgs, ... }:
+    {
+      self,
+      nixpkgs,
+      mirage,
+      ...
+    }:
     {
       nixosModules.mirage =
         {
@@ -32,7 +37,7 @@
             #!/usr/bin/env bash
 
             ${rgCommand} | while read -r path; do
-              ${self.packages.${pkgs.system}.mirage}/bin/mirage "$path" \
+              ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "$path" \
                 --shell ${pkgs.bash}/bin/sh \
                 ${lib.concatMapStringsSep " " (r: "--replace-regex '" + r + "'") mirageArgs} \
                 ${lib.concatMapStringsSep "" (r: "--replace-exec '" + r + "'") mirageArgs} \
