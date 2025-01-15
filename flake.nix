@@ -47,12 +47,21 @@
             done < <(${rgCommand})
 
             # find homeManager files
-            files=()
-            while read -r path; do
-              resolved_path=$(readlink -f "$path")
-              echo "Found file: $resolved_path"
-              files+=("$resolved_path")
-            done < <(${rgCommand2})
+            for user_profile in /etc/profiles/per-user/*; do
+              username=$(basename "$user_profile")
+              user_home=$(getent passwd "$username" | cut -d: -f6)
+
+              if [ -d "$user_home/.local/state/nix/profiles" ]; then
+                echo "Accessing $user_home/.local/state/nix/profiles"
+
+                while read -r path; do
+                  resolved_path=$(readlink -f "$path")
+                  echo "Found file: $resolved_path"
+                  files+=("$resolved_path")
+                done < <(${rgCommand2})
+
+              fi
+            done
 
             # Early stop
             if [ ''${#files[@]} -eq 0 ]; then
