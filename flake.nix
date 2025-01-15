@@ -38,8 +38,9 @@
 
             files=()
             while read -r path; do
-              echo "Found file: $path"
-              files+=("$path")
+              resolved_path=$(readlink -f "$path")
+              echo "Found file: $resolved_path"
+              files+=("$resolved_path")
             done < <(${rgCommand})
 
             echo "Starting Mirage for files: ''${files[@]}"
