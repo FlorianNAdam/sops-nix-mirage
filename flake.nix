@@ -37,11 +37,12 @@
             #!/usr/bin/env bash
 
             ${rgCommand} | while read -r path; do
-              ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "$path" \
+              nohup ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "$path" \
                 --shell ${pkgs.bash}/bin/sh \
                 ${lib.concatMapStringsSep " " (r: "--replace-exec '" + r + "'") mirageArgs} \
-                --allow-other
+                --allow-other &
             done
+            wait
           '';
         in
         {
