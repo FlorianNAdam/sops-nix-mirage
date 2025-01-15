@@ -108,7 +108,7 @@
             };
           };
 
-          config = {
+          config = mkIf config.sops.mirage.enable {
             systemd.services.mirage = {
               description = "Mirage Service with dynamic file detection";
               wantedBy = [ "multi-user.target" ];
