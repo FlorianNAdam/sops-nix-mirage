@@ -76,12 +76,7 @@
                 ExecStart = "${mirageScript}";
                 Restart = "always";
               };
-            };
-
-            system.activationScripts.restartMirage = {
-              text = ''
-                ${pkgs.systemd}/bin/systemctl restart mirage.service
-              '';
+              restartTriggers = [ (builtins.currentTime) ];
             };
 
             sops.mirage.placeholder = mapAttrs (
