@@ -26,7 +26,9 @@
         }:
         with lib;
         let
-          mirage-args = mapAttrsToList (name: value: "${name}=cat ${value.path}") config.sops.secrets;
+          mirage-args = mapAttrsToList (
+            name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
+          ) config.sops.secrets;
         in
         {
           options.sops.mirage = {
