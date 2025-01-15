@@ -28,6 +28,7 @@
         with lib;
         let
           rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER' /run/current-system";
+          rgCommand2 = "${pkgs.ripgrep}/bin/rg -L -l --hidden --no-messages 'MIRAGE_PLACEHOLDER' ~/.local/state/nix/profiles/";
 
           mirageArgs = mapAttrsToList (
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
@@ -37,6 +38,7 @@
 
             echo "Searching for files containing a mirage placeholder..."
 
+            # find nixos files
             files=()
             while read -r path; do
               resolved_path=$(readlink -f "$path")
@@ -44,11 +46,34 @@
               files+=("$resolved_path")
             done < <(${rgCommand})
 
+            # find homeManager files
+            files=()
+            while read -r path; do
+              resolved_path=$(readlink -f "$path")
+              echo "Found file: $resolved_path"
+              files+=("$resolved_path")
+            done < <(${rgCommand2})
+
+            # Early stop
             if [ ''${#files[@]} -eq 0 ]; then
               echo "No files found. Sleeping forever..."
               sleep infinity
             fi
 
+            # Deduplicate
+            declare -A seen
+            unique_files=()
+
+            for file in "${files[@]}"; do
+              if [[ -z "${seen[$file]}" ]]; then
+                unique_files+=("$file")
+                seen["$file"]=1
+              fi
+            done
+
+            files=("${unique_files[@]}")
+
+            # Mirage
             echo "Starting Mirage for files: ''${files[@]}"
             ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "''${files[@]}" \
               --shell ${pkgs.bash}/bin/sh \
@@ -97,57 +122,12 @@
       homeManagerModules.mirage =
         {
           config,
-          pkgs,
           lib,
           ...
         }:
         with lib;
-        let
-          rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --hidden --no-messages 'MIRAGE_PLACEHOLDER' ~/.local/state/nix/profiles/";
-
-          mirageArgs = mapAttrsToList (
-            name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
-          ) config.sops.secrets;
-
-          mirageScript = pkgs.writeShellScript "mirage-dynamic-service" ''
-
-            echo "Searching for files containing a mirage placeholder..."
-
-            files=()
-            while read -r path; do
-              resolved_path=$(readlink -f "$path")
-              echo "Found file: $resolved_path"
-              files+=("$resolved_path")
-            done < <(${rgCommand})
-
-            if [ ''${#files[@]} -eq 0 ]; then
-              echo "No files found. Sleeping forever..."
-              sleep infinity
-            fi
-
-            declare -A seen
-            unique_files=()
-
-            for file in "''${files[@]}"; do
-              if [[ -z "''${seen[$file]}" ]]; then
-                unique_files+=("$file")
-                seen["$file"]=1
-              fi
-            done
-
-            files=("''${unique_files[@]}")
-
-            echo "Starting Mirage for files: ''${files[@]}"
-            ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "''${files[@]}" \
-              --shell ${pkgs.bash}/bin/sh \
-              ${lib.concatMapStringsSep " " (r: "--replace-exec '" + r + "'") mirageArgs} \
-              --allow-other
-          '';
-        in
         {
           options.sops.mirage = {
-            enable = mkEnableOption "Enable the sops mirage service";
-
             placeholder = mkOption {
               type = types.attrsOf (
                 types.mkOptionType {
@@ -163,21 +143,6 @@
           };
 
           config = {
-            systemd.user.services.mirage = {
-              Unit = {
-                Description = "Mirage Service with dynamic file detection";
-              };
-
-              Install = {
-                WantedBy = [ "default.target" ];
-              };
-
-              Service = {
-                ExecStart = "${mirageScript}";
-                Restart = "always";
-              };
-            };
-
             sops.mirage.placeholder = mapAttrs (
               name: _: mkDefault "<MIRAGE:${builtins.hashString "sha256" name}:MIRAGE_PLACEHOLDER>"
             ) config.sops.secrets;
