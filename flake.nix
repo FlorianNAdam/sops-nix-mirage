@@ -51,7 +51,7 @@
           config = lib.mkIf config.sops.mirage.enable {
 
             environment.sessionVariables = {
-              SOPS_MIRAGE_ARGS = mirage-args;
+              SOPS_MIRAGE_ARGS = "test";
             };
 
             sops.mirage.placeholder = mapAttrs (
