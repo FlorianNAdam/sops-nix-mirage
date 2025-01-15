@@ -13,8 +13,8 @@
   outputs =
     {
       self,
-      inputs,
       nixpkgs,
+      mirage,
       ...
     }:
     {
@@ -27,7 +27,7 @@
         }:
         with lib;
         let
-          package = inputs.mirage.defaultPackage.${pkgs.system};
+          package = mirage.defaultPackage.${pkgs.system};
 
           rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER' /run/current-system";
 
