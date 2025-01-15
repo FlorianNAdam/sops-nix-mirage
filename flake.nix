@@ -50,7 +50,7 @@
 
           config = lib.mkIf config.sops.mirage.enable {
 
-            nvironment.sessionVariables = {
+            environment.sessionVariables = {
               SOPS_MIRAGE_ARGS = mirage-args;
             };
 
