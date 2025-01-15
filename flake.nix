@@ -151,17 +151,17 @@
           };
 
           config = {
-            systemd.user.services.mirage = {
-              description = "Mirage Service with dynamic file detection";
+            # systemd.user.services.mirage = {
+            #   description = "Mirage Service with dynamic file detection";
 
-              after = [ "default.target" ];
-              wantedBy = [ "default.target" ];
+            #   after = [ "default.target" ];
+            #   wantedBy = [ "default.target" ];
 
-              serviceConfig = {
-                ExecStart = "${mirageScript}";
-                Restart = "always";
-              };
-            };
+            #   serviceConfig = {
+            #     ExecStart = "${mirageScript}";
+            #     Restart = "always";
+            #   };
+            # };
 
             sops.mirage.placeholder = mapAttrs (
               name: _: mkDefault "<MIRAGE:${builtins.hashString "sha256" name}:MIRAGE_PLACEHOLDER>"
