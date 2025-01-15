@@ -27,7 +27,7 @@
         with lib;
         let
           mirage-args = concatStringsSep " " (
-            mapAttrsToList (name: _: "--replace-exec ${name}") config.sops.secrets
+            mapAttrsToList (name: value: "--replace-exec \"${name}=cat ${value.path}\"") config.sops.secrets
           );
         in
         {
