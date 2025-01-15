@@ -37,6 +37,7 @@
             #!/usr/bin/env bash
 
             ${rgCommand} | while read -r path; do
+              echo "Starting Mirage for file: $path"
               nohup ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "$path" \
                 --shell ${pkgs.bash}/bin/sh \
                 ${lib.concatMapStringsSep " " (r: "--replace-exec '" + r + "'") mirageArgs} \
