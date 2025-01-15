@@ -27,7 +27,7 @@
         with lib;
         let
           mirage-args = concatStringsSep " " (
-            mapAttrsToList (name: value: "--replace-exec \"${name}=cat ${value.path}\"") config.sops.secrets
+            mapAttrsToList (name: value: "${name}=cat ${value.path}") config.sops.secrets
           );
         in
         {
@@ -51,8 +51,15 @@
           config = lib.mkIf config.sops.mirage.enable {
 
             environment.sessionVariables = {
-              SOPS_MIRAGE_ARGS = "test";
+              SOPS_MIRAGE_ARGS = mirage-args;
             };
+
+            mirage.files = [
+              {
+                path = "/home/florian/secrets";
+                replaceExec = mirage-args;
+              }
+            ];
 
             sops.mirage.placeholder = mapAttrs (
               name: _: mkDefault "<MIRAGE:${builtins.hashString "sha256" name}:MIRAGE_PLACEHOLDER>"
