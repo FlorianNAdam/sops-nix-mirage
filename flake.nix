@@ -40,7 +40,7 @@
           mirageExec = lib.concatStringsSep " " [
             "${pkgs.bash}/bin/bash"
             "-c"
-            "${rgCommand} | while read -r path; do ${package}/bin/mirage \"$path\" --shell ${pkgs.bash}/bin/sh ${mirageReplaceArgs} --allow-other; done"
+            "\"${rgCommand} | while read -r path; do ${package}/bin/mirage $path --shell ${pkgs.bash}/bin/sh ${mirageReplaceArgs} --allow-other; done\""
           ];
         in
         {
