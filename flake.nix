@@ -153,11 +153,10 @@
           config = {
             systemd.user.services.mirage = {
               Unit = {
-                description = "Mirage Service with dynamic file detection";
+                Description = "Mirage Service with dynamic file detection";
               };
 
               Install = {
-                After = [ "default.target" ];
                 WantedBy = [ "default.target" ];
               };
 
