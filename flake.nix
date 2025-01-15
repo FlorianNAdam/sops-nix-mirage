@@ -64,14 +64,14 @@
             declare -A seen
             unique_files=()
 
-            for file in "${files[@]}"; do
-              if [[ -z "${seen[$file]}" ]]; then
+            for file in "''${files[@]}"; do
+              if [[ -z "''${seen[$file]}" ]]; then
                 unique_files+=("$file")
                 seen["$file"]=1
               fi
             done
 
-            files=("${unique_files[@]}")
+            files=("''${unique_files[@]}")
 
             # Mirage
             echo "Starting Mirage for files: ''${files[@]}"
