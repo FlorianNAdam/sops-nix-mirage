@@ -80,7 +80,7 @@
 
             system.activationScripts.restartMirage = {
               text = ''
-                systemctl restart mirage.service
+                ${pkgs.systemd}/bin/systemctl restart mirage.service
               '';
             };
 
