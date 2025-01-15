@@ -73,8 +73,8 @@
               description = "Mirage Service with dynamic file detection";
               wantedBy = [ "multi-user.target" ];
 
-              bindsTo = [ "systemd-tmpfiles-setup.service" ];
-              partOf = [ "systemd-tmpfiles-setup.service" ];
+              bindsTo = [ "sysinit-reactivation.target" ];
+              partOf = [ "sysinit-reactivation.target" ];
 
               serviceConfig = {
                 ExecStart = "${mirageScript}";
