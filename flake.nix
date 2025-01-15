@@ -138,10 +138,10 @@
             files=("''${unique_files[@]}")
 
             echo "Starting Mirage for files: ''${files[@]}"
-            # ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "''${files[@]}" \
-            #   --shell ${pkgs.bash}/bin/sh \
-            #   ${lib.concatMapStringsSep " " (r: "--replace-exec '" + r + "'") mirageArgs} \
-            #   --allow-other
+            ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "''${files[@]}" \
+              --shell ${pkgs.bash}/bin/sh \
+              ${lib.concatMapStringsSep " " (r: "--replace-exec '" + r + "'") mirageArgs} \
+              --allow-other
           '';
         in
         {
