@@ -78,8 +78,11 @@
               };
             };
 
-            environment.sessionVariables = {
-              SOPS_MIRAGE_ARGS = mirageArgs;
+            system.activationScripts.restartMirage = {
+              text = ''
+                systemctl restart mirage.service
+              '';
+              deps = [ "systemd" ];
             };
 
             sops.mirage.placeholder = mapAttrs (
