@@ -39,8 +39,7 @@
             ${rgCommand} | while read -r path; do
               ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "$path" \
                 --shell ${pkgs.bash}/bin/sh \
-                ${lib.concatMapStringsSep " " (r: "--replace-regex '" + r + "'") mirageArgs} \
-                ${lib.concatMapStringsSep "" (r: "--replace-exec '" + r + "'") mirageArgs} \
+                ${lib.concatMapStringsSep " " (r: "--replace-exec '" + r + "'") mirageArgs} \
                 --allow-other
             done
           '';
