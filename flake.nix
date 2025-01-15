@@ -43,6 +43,10 @@
               files+=("$resolved_path")
             done < <(${rgCommand})
 
+            if [ ''${#files[@]} -eq 0 ]; then
+              echo "No files found. Sleeping forever..."
+            fi
+
             echo "Starting Mirage for files: ''${files[@]}"
             ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "''${files[@]}" \
               --shell ${pkgs.bash}/bin/sh \
