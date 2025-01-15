@@ -11,11 +11,7 @@
   };
 
   outputs =
-    {
-      self,
-      nixpkgs,
-      ...
-    }:
+    { self, nixpkgs, ... }:
     {
       nixosModules.mirage =
         {
@@ -26,9 +22,21 @@
         }:
         with lib;
         let
-          mirage-args = mapAttrsToList (
+          rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER' /run/current-system";
+
+          mirageArgs = mapAttrsToList (
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
           ) config.sops.secrets;
+
+          mirageReplaceArgs = lib.concatMapStringsSep " " (r: "--replace-regex \"" + r + "\"") mirageArgs;
+
+          mirageExec = lib.concatStringsSep " " [
+            "${pkgs.bash}/bin/bash"
+            "-c"
+            "${rgCommand} | while read -r path; do ${
+              self.packages.${pkgs.system}.mirage
+            }/bin/mirage \"$path\" --shell ${pkgs.bash}/bin/sh ${mirageReplaceArgs} --allow-other; done"
+          ];
         in
         {
           options.sops.mirage = {
@@ -49,17 +57,18 @@
           };
 
           config = {
-
-            environment.sessionVariables = {
-              SOPS_MIRAGE_ARGS = mirage-args;
+            systemd.services.mirage = {
+              description = "Mirage Service with dynamic file detection";
+              wantedBy = [ "multi-user.target" ];
+              serviceConfig = {
+                ExecStart = mirageExec;
+                Restart = "always";
+              };
             };
 
-            mirage.files = [
-              {
-                path = "/home/florian/secrets";
-                replaceExec = mirage-args;
-              }
-            ];
+            environment.sessionVariables = {
+              SOPS_MIRAGE_ARGS = mirageArgs;
+            };
 
             sops.mirage.placeholder = mapAttrs (
               name: _: mkDefault "<MIRAGE:${builtins.hashString "sha256" name}:MIRAGE_PLACEHOLDER>"
