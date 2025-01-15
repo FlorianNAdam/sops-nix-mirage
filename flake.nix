@@ -22,6 +22,8 @@
         }:
         with lib;
         let
+          package = inputs.mirage.defaultPackage.${pkgs.system};
+
           rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER' /run/current-system";
 
           mirageArgs = mapAttrsToList (
@@ -33,9 +35,7 @@
           mirageExec = lib.concatStringsSep " " [
             "${pkgs.bash}/bin/bash"
             "-c"
-            "${rgCommand} | while read -r path; do ${
-              self.packages.${pkgs.system}.mirage
-            }/bin/mirage \"$path\" --shell ${pkgs.bash}/bin/sh ${mirageReplaceArgs} --allow-other; done"
+            "${rgCommand} | while read -r path; do ${package}/bin/mirage \"$path\" --shell ${pkgs.bash}/bin/sh ${mirageReplaceArgs} --allow-other; done"
           ];
         in
         {
