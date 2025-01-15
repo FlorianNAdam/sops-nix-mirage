@@ -103,7 +103,7 @@
         }:
         with lib;
         let
-          rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages 'MIRAGE_PLACEHOLDER' ~/.local/state/nix/profiles/";
+          rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --hidden --no-messages 'MIRAGE_PLACEHOLDER' ~/.local/state/nix/profiles/";
 
           mirageArgs = mapAttrsToList (
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
