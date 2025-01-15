@@ -49,7 +49,7 @@
             # find homeManager files
             for user_profile in /etc/profiles/per-user/*; do
               username=$(basename "$user_profile")
-              user_home=$(getent passwd "$username" | cut -d: -f6)
+              user_home=$(${pkgs.getent}/bin/getent passwd "$username" | cut -d: -f6)
 
               if [ -d "$user_home/.local/state/nix/profiles" ]; then
                 echo "Accessing $user_home/.local/state/nix/profiles"
