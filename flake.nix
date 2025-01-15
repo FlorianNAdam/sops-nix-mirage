@@ -82,7 +82,6 @@
               text = ''
                 systemctl restart mirage.service
               '';
-              deps = [ "systemd" ];
             };
 
             sops.mirage.placeholder = mapAttrs (
