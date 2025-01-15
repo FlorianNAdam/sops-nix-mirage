@@ -152,15 +152,14 @@
 
           config = {
             systemd.user.services.mirage = {
-              serviceConfig = {
-                Description = "Mirage Service with dynamic file detection";
+              Description = "Mirage Service with dynamic file detection";
 
+              After = [ "default.target" ];
+              WantedBy = [ "default.target" ];
+
+              Service = {
                 ExecStart = "${mirageScript}";
                 Restart = "always";
-              };
-
-              Install = {
-                WantedBy = [ "default.target" ];
               };
             };
 
