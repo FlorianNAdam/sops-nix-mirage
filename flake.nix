@@ -10,9 +10,16 @@
     };
   };
 
-  outputs = { self, nixpkgs, ... }:
+  outputs =
+    { self, nixpkgs, ... }:
     {
-      nixosModules.mirage = { config, pkgs, lib, ... }:
+      nixosModules.mirage =
+        {
+          config,
+          pkgs,
+          lib,
+          ...
+        }:
         with lib;
         let
           rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER' /run/current-system";
@@ -23,11 +30,12 @@
 
           mirageScript = pkgs.writeShellScript "mirage-dynamic-service" ''
             #!/usr/bin/env bash
+
             ${rgCommand} | while read -r path; do
               ${self.packages.${pkgs.system}.mirage}/bin/mirage "$path" \
                 --shell ${pkgs.bash}/bin/sh \
-                ${lib.concatMapStringsSep ' ' (r: '--replace-regex "' + r + '"') mirageArgs} \
-                ${lib.concatMapStringsSep ' ' (r: '--replace-exec "' + r + '"') mirageArgs} \
+                ${lib.concatMapStringsSep " " (r: "--replace-regex '" + r + "'") mirageArgs} \
+                ${lib.concatMapStringsSep "" (r: "--replace-exec '" + r + "'") mirageArgs} \
                 --allow-other
             done
           '';
