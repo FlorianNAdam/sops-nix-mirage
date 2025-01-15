@@ -46,7 +46,7 @@
               pids+=("$!")
             done
 
-            for pid in "$${pids[@]}"; do
+            for pid in "''${pids[@]}"; do
               wait "$pid"
             done
           '';
