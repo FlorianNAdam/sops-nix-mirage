@@ -45,6 +45,7 @@
 
             if [ ''${#files[@]} -eq 0 ]; then
               echo "No files found. Sleeping forever..."
+              sleep infinity
             fi
 
             echo "Starting Mirage for files: ''${files[@]}"
