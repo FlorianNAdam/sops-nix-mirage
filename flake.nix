@@ -14,6 +14,7 @@
     {
       self,
       nixpkgs,
+      ...
     }:
     {
       nixosModules.mirage =
