@@ -125,6 +125,18 @@
               sleep infinity
             fi
 
+            declare -A seen
+            unique_files=()
+
+            for file in "''${files[@]}"; do
+              if [[ -z "''${seen[$file]}" ]]; then
+                unique_files+=("$file")
+                seen["$file"]=1
+              fi
+            done
+
+            files=("''${unique_files[@]}")
+
             echo "Starting Mirage for files: ''${files[@]}"
             # ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "''${files[@]}" \
             #   --shell ${pkgs.bash}/bin/sh \
