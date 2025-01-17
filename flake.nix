@@ -113,8 +113,8 @@
               description = "Mirage Service with dynamic file detection";
               wantedBy = [ "multi-user.target" ];
 
-              bindsTo = [ "sysinit-reactivation.target" ];
-              partOf = [ "sysinit-reactivation.target" ];
+              requiredBy = [ "sysinit-reactivation.target" ];
+              before = [ "sysinit-reactivation.target" ];
 
               serviceConfig = {
                 ExecStart = "${mirageScript}";
