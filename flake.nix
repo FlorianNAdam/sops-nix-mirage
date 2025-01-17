@@ -65,8 +65,8 @@
 
             # Early stop
             if [ ''${#files[@]} -eq 0 ]; then
-              echo "No files found. Sleeping forever..."
-              sleep infinity
+              echo "No files found. Exiting..."
+              exit 0
             fi
 
             # Deduplicate
