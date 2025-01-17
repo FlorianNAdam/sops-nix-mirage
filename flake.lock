@@ -8,11 +8,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1736930419,
-        "narHash": "sha256-iXkP9L3ys7mwf/D7lUeFhqkAsvjnLeTsl5sL2TKRe8U=",
+        "lastModified": 1737074978,
+        "narHash": "sha256-y97gsEIAbLNwIKxo6AtpfkfnNlTW7Z7+sF/lB7vdG5o=",
         "owner": "FlorianNAdam",
         "repo": "mirage",
-        "rev": "74f44f053c3fbb63df92918ab2340b565ea7a456",
+        "rev": "d83b669120c3d30a15e552fea63abc7ea570a8aa",
         "type": "github"
       },
       "original": {
@@ -23,7 +23,10 @@
     },
     "naersk": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": [
+          "mirage",
+          "nixpkgs"
+        ]
       },
       "locked": {
         "lastModified": 1736429655,
@@ -42,19 +45,6 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1736523798,
-        "narHash": "sha256-Xb8mke6UCYjge9kPR9o4P1nVrhk7QBbKv3xQ9cj7h2s=",
-        "path": "/nix/store/cginla74w7h4gln9b3mva6l4nmj6gj30-source",
-        "rev": "130595eba61081acde9001f43de3248d8888ac4a",
-        "type": "path"
-      },
-      "original": {
-        "id": "nixpkgs",
-        "type": "indirect"
-      }
-    },
-    "nixpkgs_2": {
-      "locked": {
         "lastModified": 1736798957,
         "narHash": "sha256-qwpCtZhSsSNQtK4xYGzMiyEDhkNzOCz/Vfu4oL2ETsQ=",
         "owner": "NixOS",
@@ -72,7 +62,7 @@
     "root": {
       "inputs": {
         "mirage": "mirage",
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": "nixpkgs"
       }
     }
   },
