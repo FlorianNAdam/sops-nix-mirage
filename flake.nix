@@ -119,6 +119,7 @@
               serviceConfig = {
                 ExecStart = "${mirageScript}";
                 Restart = "on-failure";
+                TimeoutStopSec = "10s";
               };
             };
 
