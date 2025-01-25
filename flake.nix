@@ -27,14 +27,82 @@
         }:
         with lib;
         let
-          rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER' /run/current-system";
+          rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER' /nix/var/nix/profiles/system/";
           rgCommand2 = "${pkgs.ripgrep}/bin/rg -L -l --hidden --no-messages 'MIRAGE_PLACEHOLDER'";
 
           mirageArgs = mapAttrsToList (
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
           ) config.sops.secrets;
 
+          fileFinderScript = pkgs.writeShellScript "mirage-file-finder" ''
+             
+            echo "Searching for files containing a mirage placeholder..." >&2
+
+            files=()
+
+            # Find NixOS files
+            while read -r path; do
+              resolved_path=$(readlink -f "$path")
+              echo "Found file: $resolved_path" >&2
+              files+=("$resolved_path")
+
+              # Find matching file in /etc
+              if [[ "$path" == /nix/var/nix/profiles/system/etc/* ]]; then
+                etc_path="/etc/''${path#/nix/var/nix/profiles/system/etc/}"
+                
+                if [ -f "$etc_path" ]; then
+
+                  # Ignore symlinks from /etc to /nix/store
+                  resolved_etc_path=$(readlink -f "$etc_path")
+                  if [[ "$resolved_etc_path" != /nix/store/* ]]; then
+                    echo "Found matching file in /etc: $resolved_etc_path" >&2
+                    files+=("$resolved_etc_path")
+                  fi
+                fi
+              fi
+
+            done < <(${rgCommand})
+
+            # Find Home Manager files
+            for user_profile in /etc/profiles/per-user/*; do
+              username=$(basename "$user_profile")
+              user_home=$(${pkgs.getent}/bin/getent passwd "$username" | cut -d: -f6)
+
+              if [ -d "$user_home/.local/state/nix/profiles" ]; then
+                echo "Accessing $user_home/.local/state/nix/profiles" >&2
+
+                while read -r path; do
+                  resolved_path=$(readlink -f "$path")
+                  echo "Found file: $resolved_path" >&2
+                  files+=("$resolved_path")
+                done < <(${rgCommand2} $user_home/.local/state/nix/profiles)
+              fi
+            done
+
+            # Deduplicate files
+            declare -A seen
+            unique_files=()
+
+            for file in "''${files[@]}"; do
+              if [[ -z "''${seen[$file]}" ]]; then
+                unique_files+=("$file")
+                seen["$file"]=1
+              fi
+            done
+
+            printf "%s\n" "''${unique_files[@]}"
+          '';
+
           mirageScript = pkgs.writeShellScript "mirage-dynamic-service" ''
+
+            files2=()
+            while IFS= read -r line; do
+              files2+=("$line")
+            done < <(${fileFinderScript})
+
+
+            echo "Starting Mirage for files: ''${files2[@]}"
+
 
             echo "Searching for files containing a mirage placeholder..."
 
