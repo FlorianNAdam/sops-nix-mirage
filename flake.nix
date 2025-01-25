@@ -95,41 +95,11 @@
 
           mirageScript = pkgs.writeShellScript "mirage-dynamic-service" ''
 
-            files2=()
-            while IFS= read -r line; do
-              files2+=("$line")
-            done < <(${fileFinderScript})
-
-
-            echo "Starting Mirage for files: ''${files2[@]}"
-
-
-            echo "Searching for files containing a mirage placeholder..."
-
-            # find nixos files
+            # Find files
             files=()
-            while read -r path; do
-              resolved_path=$(readlink -f "$path")
-              echo "Found file: $resolved_path"
-              files+=("$resolved_path")
-            done < <(${rgCommand})
-
-            # find homeManager files
-            for user_profile in /etc/profiles/per-user/*; do
-              username=$(basename "$user_profile")
-              user_home=$(${pkgs.getent}/bin/getent passwd "$username" | cut -d: -f6)
-
-              if [ -d "$user_home/.local/state/nix/profiles" ]; then
-                echo "Accessing $user_home/.local/state/nix/profiles"
-
-                while read -r path; do
-                  resolved_path=$(readlink -f "$path")
-                  echo "Found file: $resolved_path"
-                  files+=("$resolved_path")
-                done < <(${rgCommand2} $user_home/.local/state/nix/profiles)
-
-              fi
-            done
+            while IFS= read -r line; do
+              files+=("$line")
+            done < <(${fileFinderScript})
 
             # Early stop
             if [ ''${#files[@]} -eq 0 ]; then
