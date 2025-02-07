@@ -64,19 +64,15 @@
             done < <(${rgCommand})
 
             # Find Home Manager files
-            for user_profile in /etc/profiles/per-user/*; do
-              username=$(basename "$user_profile")
-              user_home=$(${pkgs.getent}/bin/getent passwd "$username" | cut -d: -f6)
+            gen_paths=$(nix-store -qR /nix/var/nix/profiles/system | grep home-manager-generation || true)
 
-              if [ -d "$user_home/.local/state/nix/profiles" ]; then
-                echo "Accessing $user_home/.local/state/nix/profiles" >&2
-
-                while read -r path; do
+            for gen_path in $gen_paths; do
+              echo "Found Home Manager generation: $gen_path"
+              while read -r path; do
                   resolved_path=$(readlink -f "$path")
                   echo "Found file: $resolved_path" >&2
                   files+=("$resolved_path")
-                done < <(${rgCommand2} $user_home/.local/state/nix/profiles)
-              fi
+              done < <(${rgCommand2} $gen_path)
             done
 
             # Deduplicate files
