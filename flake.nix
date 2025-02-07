@@ -29,7 +29,7 @@
         let
           rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER' /nix/var/nix/profiles/system/";
           rgCommand2 = "${pkgs.ripgrep}/bin/rg -L -l --hidden --no-messages 'MIRAGE_PLACEHOLDER'";
-          nixStore = "/run/current-system/sw/bin/nix-store";
+          nixStore = "/nix/var/nix/profiles/system/sw/bin/nix-store";
 
           mirageArgs = mapAttrsToList (
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
