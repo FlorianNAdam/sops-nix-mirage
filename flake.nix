@@ -29,6 +29,7 @@
         let
           rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER' /nix/var/nix/profiles/system/";
           rgCommand2 = "${pkgs.ripgrep}/bin/rg -L -l --hidden --no-messages 'MIRAGE_PLACEHOLDER'";
+          nixStore = "/run/current-system/sw/bin/nix-store";
 
           mirageArgs = mapAttrsToList (
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
@@ -64,7 +65,7 @@
             done < <(${rgCommand})
 
             # Find Home Manager files
-            gen_paths=$(nix-store -qR /nix/var/nix/profiles/system | grep home-manager-generation || true)
+            gen_paths=$(${nixStore} -qR /nix/var/nix/profiles/system | grep home-manager-generation || true)
 
             for gen_path in $gen_paths; do
               echo "Found Home Manager generation: $gen_path"
