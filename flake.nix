@@ -68,7 +68,7 @@
             gen_paths=$(${nixStore} -qR /nix/var/nix/profiles/system | grep home-manager-generation || true)
 
             for gen_path in $gen_paths; do
-              echo "Found Home Manager generation: $gen_path"
+              echo "Found Home Manager generation: $gen_path" >&2
               while read -r path; do
                   resolved_path=$(readlink -f "$path")
                   echo "Found file: $resolved_path" >&2
