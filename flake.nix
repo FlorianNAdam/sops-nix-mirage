@@ -98,6 +98,9 @@
               files+=("$line")
             done < <(${fileFinderScript})
 
+            # Add manually specified files
+            ${concatStringsSep "\n" (map (file: "files+=(\"${file}\")") config.sops.mirage.files)}
+
             # Early stop
             if [ ''${#files[@]} -eq 0 ]; then
               echo "No files found. Exiting..."
@@ -128,6 +131,12 @@
         {
           options.sops.mirage = {
             enable = mkEnableOption "Enable the sops mirage service";
+
+            files = mkOption {
+              type = with types; listOf str;
+              default = [ ];
+              description = "List of files to overlay";
+            };
 
             placeholder = mkOption {
               type = types.attrsOf (
