@@ -155,10 +155,17 @@
           config = mkIf config.sops.mirage.enable {
             systemd.services.mirage = {
               description = "Mirage Service with dynamic file detection";
-              wantedBy = [ "multi-user.target" ];
+              wantedBy = [ "sysinit.target" ];
 
-              bindsTo = [ "sysinit-reactivation.target" ];
-              partOf = [ "sysinit-reactivation.target" ];
+              after = [
+                "local-fs.target"
+                "systemd-modules-load.service"
+              ];
+              before = [
+                "multi-user.target"
+                "basic.target"
+              ];
+              requires = [ "systemd-modules-load.service" ];
 
               serviceConfig = {
                 ExecStart = "${mirageScript}";
