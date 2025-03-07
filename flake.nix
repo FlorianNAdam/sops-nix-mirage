@@ -177,7 +177,6 @@
               };
 
               restartIfChanged = true;
-              reloadIfChanged = true;
             };
 
             sops.mirage.placeholder = mapAttrs (
