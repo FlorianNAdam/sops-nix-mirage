@@ -165,7 +165,6 @@
               ];
               before = [
                 "multi-user.target"
-                "basic.target"
               ];
               requires = [ "systemd-modules-load.service" ];
 
