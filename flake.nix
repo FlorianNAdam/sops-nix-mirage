@@ -157,7 +157,6 @@
               description = "Mirage Service with dynamic file detection";
               wantedBy = [
                 "sysinit.target"
-                "sysinit-reactivation.target"
               ];
 
               after = [
