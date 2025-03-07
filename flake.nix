@@ -155,7 +155,10 @@
           config = mkIf config.sops.mirage.enable {
             systemd.services.mirage = {
               description = "Mirage Service with dynamic file detection";
-              wantedBy = [ "sysinit.target" ];
+              wantedBy = [
+                "sysinit.target"
+                "sysinit-reactivation.target"
+              ];
 
               after = [
                 "local-fs.target"
@@ -172,6 +175,9 @@
                 Restart = "on-failure";
                 TimeoutStopSec = "10s";
               };
+
+              restartIfChanged = true;
+              reloadIfChanged = true;
             };
 
             sops.mirage.placeholder = mapAttrs (
