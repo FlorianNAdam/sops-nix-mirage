@@ -104,48 +104,12 @@
             printf "%s\n" "''${unique_files[@]}"
           '';
 
+          mirageReplaceString = "${lib.concatMapStringsSep " " (r: "--replace-exec '" + r + "'") mirageArgs}";
+
+          mirage = "${mirage.defaultPackage.${pkgs.system}}/bin/mirage";
+
           mirageScript = pkgs.writeShellScript "mirage-dynamic-service" ''
-
-            # System path
-            system_path="/run/current-system"
-            if [[ ! -e "$system_path" ]]; then
-              system_path="/nix/var/nix/profiles/system"
-            fi
-
-            # Find files
-            files=()
-            while IFS= read -r line; do
-              files+=("$line")
-            done < <(${fileFinderScript} $system_path)
-
-            # Add manually specified files
-            ${concatStringsSep "\n" (map (file: "files+=(\"${file}\")") config.sops.mirage.files)}
-
-            # Early stop
-            if [ ''${#files[@]} -eq 0 ]; then
-              echo "No files found. Exiting..."
-              exit 0
-            fi
-
-            # Deduplicate
-            declare -A seen
-            unique_files=()
-
-            for file in "''${files[@]}"; do
-              if [[ -z "''${seen[$file]}" ]]; then
-                unique_files+=("$file")
-                seen["$file"]=1
-              fi
-            done
-
-            files=("''${unique_files[@]}")
-
-            # Mirage
-            echo "Starting Mirage for files: ''${files[@]}"
-            ${mirage.defaultPackage.${pkgs.system}}/bin/mirage "''${files[@]}" \
-              --shell ${pkgs.bash}/bin/sh \
-              ${lib.concatMapStringsSep " " (r: "--replace-exec '" + r + "'") mirageArgs} \
-              --allow-other
+            ${mirage} --watch-file /var/lib/mirage/files --shell ${pkgs.bash}/bin/sh ${mirageReplaceString} --allow-other
           '';
         in
         {
