@@ -8,11 +8,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1737109428,
-        "narHash": "sha256-6uDuONDr8H4wRYqU2OGj3lKZ6SMyISZYXmd30jafbr4=",
+        "lastModified": 1741873430,
+        "narHash": "sha256-2QDNymGn2bK7GGcLUSq9UZS8M1gLbvDKyTsw4VEhthM=",
         "owner": "FlorianNAdam",
         "repo": "mirage",
-        "rev": "d2a0f151b3894eb3582fd6fa1ceb297a6bc67575",
+        "rev": "c8392189c9f82bedb6da8bba7119a759b570c2bd",
         "type": "github"
       },
       "original": {
