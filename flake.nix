@@ -106,6 +106,12 @@
 
           mirageScript = pkgs.writeShellScript "mirage-dynamic-service" ''
 
+            # System path
+            system_path="/run/current-system"
+            if [[ ! -e "$system_path" ]]; then
+              system_path="/nix/var/nix/profiles/system"
+            fi
+
             # Find files
             files=()
             while IFS= read -r line; do
