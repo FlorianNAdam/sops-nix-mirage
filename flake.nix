@@ -146,7 +146,7 @@
             ${concatStringsSep "\n" (map (file: "files+=(\"${file}\")") config.sops.mirage.files)}
 
             # Step 4: Sort and remove duplicates
-            sorted_unique_files=($(printf "%s\n" "''${files[@]}" | rev | sort -u | rev))
+            sorted_unique_files=($(printf "%s\n" "''${files[@]}" | ${pkgs.util-linux}/bin/rev | sort -u | ${pkgs.util-linux}/bin/rev))
 
             # Step 5: Write back the sorted, unique list
             printf "%s\n" "''${sorted_unique_files[@]}" > "$file_list"
