@@ -221,7 +221,9 @@
             systemd.paths."mirage-reload" = {
               description = "Watch for NixOS system changes";
               wantedBy = [ "multi-user.target" ];
-              pathConfig.PathChanged = "/run/current-system";
+              pathConfig = {
+                PathExistsGlob = "/run/current-system/*";
+              };
             };
 
             systemd.services."mirage-reload" = {
