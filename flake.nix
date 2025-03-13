@@ -218,23 +218,18 @@
               };
             };
 
-            systemd.paths."mirage-reload" = {
-              description = "Watch for NixOS system changes";
-              wantedBy = [ "multi-user.target" ];
-              pathConfig = {
-                PathExistsGlob = "/run/current-system/activate";
-              };
-            };
-
             systemd.services."mirage-reload" = {
-              description = "Reload mirage, when /run/current-system changes";
-              requires = [ "mirage-reload.path" ];
-              after = [ "mirage-reload.path" ];
+              description = "Reload mirage upon rebuild";
+              after = [
+                "local-fs.target"
+                "systemd-modules-load.service"
+              ];
+              wantedBy = [
+                "sysinit-reactivation.target"
+              ];
               serviceConfig = {
                 Type = "oneshot";
                 ExecStart = "${mirageReloadScript} /run/current-system";
-                StartLimitIntervalSec = 60;
-                StartLimitBurst = 1;
               };
             };
 
