@@ -38,25 +38,25 @@
             gen_root="$1"
 
             if [ -z "$gen_root" ]; then
-                echo "Usage: $0 gen_root"
+                echo "usage: $0 gen_root"
                 exit 1
             fi
 
             if [ ! -d "$gen_root" ]; then
-                echo "Error: '$gen_root' is not a valid directory."
+                echo "error: '$gen_root' is not a valid directory."
                 exit 1
             fi
 
             gen_root="''${gen_root%/}/"
              
-            echo "Searching for files containing a mirage placeholder..." >&2
+            echo "searching for files containing a mirage placeholder..." >&2
 
             files=()
 
             # Find NixOS files
             while read -r path; do
               resolved_path=$(readlink -f "$path")
-              echo "Found file: $resolved_path" >&2
+              echo "found file: $resolved_path" >&2
               files+=("$resolved_path")
 
               # Find matching file in /etc
@@ -69,7 +69,7 @@
                   # Ignore symlinks from /etc to /nix/store
                   resolved_etc_path=$(readlink -f "$etc_path")
                   if [[ "$resolved_etc_path" != /nix/store/* ]]; then
-                    echo "Found matching file in /etc: $resolved_etc_path" >&2
+                    echo "found matching file in /etc: $resolved_etc_path" >&2
                     files+=("$resolved_etc_path")
                   fi
                 fi
@@ -82,10 +82,10 @@
             gen_paths=$($nix_store -qR $gen_root | grep home-manager-generation || true)
 
             for gen_path in $gen_paths; do
-              echo "Found Home Manager generation: $gen_path" >&2
+              echo "found Home Manager generation: $gen_path" >&2
               while read -r path; do
                   resolved_path=$(readlink -f "$path")
-                  echo "Found file: $resolved_path" >&2
+                  echo "found file: $resolved_path" >&2
                   files+=("$resolved_path")
               done < <(${rgCommand2} $gen_path)
             done
@@ -102,6 +102,55 @@
             done
 
             printf "%s\n" "''${unique_files[@]}"
+          '';
+
+          mirageReloadScript = pkgs.writeShellScript "mirage-reload" ''
+            gen_root="$1"
+
+            if [ -z "$gen_root" ]; then
+                echo "usage: $0 gen_root"
+                exit 1
+            fi
+
+            if [ ! -d "$gen_root" ]; then
+                echo "error: '$gen_root' is not a valid directory."
+                exit 1
+            fi
+
+            gen_root="''${gen_root%/}/"
+
+
+            file_list="/var/lib/mirage/files"
+
+            # Remove file on boot
+            if [[ ! -e "/run/current-system" ]]; then
+              rm -f "$file_list"
+            fi
+
+            # Ensure the file exists
+            mkdir -p "$(dirname "$file_list")"
+            touch "$file_list"
+
+            # Step 1: Read existing files from /var/lib/mirage/files
+            files=()
+            while IFS= read -r line; do
+              files+=("$line")
+            done < "$file_list"
+
+            # Step 2: Read new files from the fileFinderScript
+            while IFS= read -r line; do
+              files+=("$line")
+            done < <(${fileFinderScript} $gen_root)
+
+            # Step 3: Add manually specified files
+            ${concatStringsSep "\n" (map (file: "files+=(\"${file}\")") config.sops.mirage.files)}
+
+            # Step 4: Sort and remove duplicates
+            sorted_unique_files=($(printf "%s\n" "''${files[@]}" | sort -u))
+
+            # Step 5: Write back the sorted, unique list
+            printf "%s\n" "''${sorted_unique_files[@]}" > "$file_list"
+
           '';
 
           mirageReplaceString = "${lib.concatMapStringsSep " " (r: "--replace-exec '" + r + "'") mirageArgs}";
@@ -139,43 +188,12 @@
           config = mkIf config.sops.mirage.enable {
             environment.systemPackages = [
               (pkgs.writeShellScriptBin "mirage-file-finder" ''"${fileFinderScript}" "$@"'')
+              (pkgs.writeShellScriptBin "mirage-reload" ''"${mirageReloadScript}" "$@"'')
             ];
 
             system.activationScripts.myScript = ''
-              echo "Running my activation script..."
-
-              file_list="/var/lib/mirage/files"
-
-               # System path
-              system_path="/run/current-system"
-              if [[ ! -e "$system_path" ]]; then
-                rm -f "$file_list"
-                system_path="/nix/var/nix/profiles/system"
-              fi
-
-              # Ensure the file exists
-              mkdir -p "$(dirname "$file_list")"
-              touch "$file_list"
-
-              # Step 1: Read existing files from /var/lib/mirage/files
-              files=()
-              while IFS= read -r line; do
-                files+=("$line")
-              done < "$file_list"
-
-              # Step 2: Read new files from the fileFinderScript
-              while IFS= read -r line; do
-                files+=("$line")
-              done < <(${fileFinderScript} $system_path)
-
-              # Step 3: Add manually specified files
-              ${concatStringsSep "\n" (map (file: "files+=(\"${file}\")") config.sops.mirage.files)}
-
-              # Step 4: Sort and remove duplicates
-              sorted_unique_files=($(printf "%s\n" "''${files[@]}" | sort -u))
-
-              # Step 5: Write back the sorted, unique list
-              printf "%s\n" "''${sorted_unique_files[@]}" > "$file_list"
+              echo "setting up /var/lib/mirage/files..."
+              ${mirageReloadScript} /nix/var/nix/profiles/system
             '';
 
             systemd.services.mirage = {
@@ -197,6 +215,22 @@
                 ExecStart = "${mirageScript}";
                 Restart = "on-failure";
                 TimeoutStopSec = "10s";
+              };
+            };
+
+            systemd.paths."mirage-reload" = {
+              description = "Watch for NixOS system changes";
+              wantedBy = [ "multi-user.target" ];
+              pathConfig.PathChanged = "/run/current-system";
+            };
+
+            systemd.services."mirage-reload" = {
+              description = "Reload mirage, when /run/current-system changes";
+              requires = [ "mirage-reload.path" ];
+              after = [ "mirage-reload.path" ];
+              serviceConfig = {
+                Type = "oneshot";
+                ExecStart = "${mirageReloadScript} /run/current-system";
               };
             };
 
