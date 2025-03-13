@@ -27,15 +27,27 @@
         }:
         with lib;
         let
-          rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER' /nix/var/nix/profiles/system/";
+          rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER'";
           rgCommand2 = "${pkgs.ripgrep}/bin/rg -L -l --hidden --no-messages 'MIRAGE_PLACEHOLDER'";
-          nixStore = "/nix/var/nix/profiles/system/sw/bin/nix-store";
 
           mirageArgs = mapAttrsToList (
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
           ) config.sops.secrets;
 
           fileFinderScript = pkgs.writeShellScript "mirage-file-finder" ''
+            gen_root="$1"
+
+            if [ -z "$gen_root" ]; then
+                echo "Usage: $0 gen_root"
+                exit 1
+            fi
+
+            if [ ! -d "$gen_root" ]; then
+                echo "Error: '$gen_root' is not a valid directory."
+                exit 1
+            fi
+
+            gen_root="''${gen_root%/}/"
              
             echo "Searching for files containing a mirage placeholder..." >&2
 
@@ -48,9 +60,10 @@
               files+=("$resolved_path")
 
               # Find matching file in /etc
-              if [[ "$path" == /nix/var/nix/profiles/system/etc/* ]]; then
-                etc_path="/etc/''${path#/nix/var/nix/profiles/system/etc/}"
-                
+              gen_etc="$gen_root"etc/                          
+              if [[ "$path" == "$gen_etc"* ]]; then
+              
+                etc_path="/etc/''${path#$gen_etc}"
                 if [ -f "$etc_path" ]; then
 
                   # Ignore symlinks from /etc to /nix/store
@@ -62,10 +75,11 @@
                 fi
               fi
 
-            done < <(${rgCommand})
+            done < <(${rgCommand} $gen_root)
 
             # Find Home Manager files
-            gen_paths=$(${nixStore} -qR /nix/var/nix/profiles/system | grep home-manager-generation || true)
+            nix_store="$gen_root"sw/bin/nix-store
+            gen_paths=$($nix_store -qR $gen_root | grep home-manager-generation || true)
 
             for gen_path in $gen_paths; do
               echo "Found Home Manager generation: $gen_path" >&2
@@ -96,7 +110,7 @@
             files=()
             while IFS= read -r line; do
               files+=("$line")
-            done < <(${fileFinderScript})
+            done < <(${fileFinderScript} /run/current-system)
 
             # Add manually specified files
             ${concatStringsSep "\n" (map (file: "files+=(\"${file}\")") config.sops.mirage.files)}
@@ -153,6 +167,40 @@
           };
 
           config = mkIf config.sops.mirage.enable {
+            environment.systemPackages = [
+              (pkgs.writeShellScriptBin "mirage-file-finder" ''"${fileFinderScript}" "$@"'')
+            ];
+
+            system.activationScripts.myScript = ''
+              echo "Running my activation script..."
+
+              file_list="/var/lib/mirage/files"
+
+              # Ensure the file exists
+              mkdir -p "$(dirname "$file_list")"
+              touch "$file_list"
+
+              # Step 1: Read existing files from /var/lib/mirage/files
+              files=()
+              while IFS= read -r line; do
+                files+=("$line")
+              done < "$file_list"
+
+              # Step 2: Read new files from the fileFinderScript
+              while IFS= read -r line; do
+                files+=("$line")
+              done < <(${fileFinderScript} /run/current-system)
+
+              # Step 3: Add manually specified files
+              ${concatStringsSep "\n" (map (file: "files+=(\"${file}\")") config.sops.mirage.files)}
+
+              # Step 4: Sort and remove duplicates
+              sorted_unique_files=($(printf "%s\n" "''${files[@]}" | sort -u))
+
+              # Step 5: Write back the sorted, unique list
+              printf "%s\n" "''${sorted_unique_files[@]}" > "$file_list"
+            '';
+
             systemd.services.mirage = {
               description = "Mirage Service with dynamic file detection";
               wantedBy = [
@@ -173,8 +221,6 @@
                 Restart = "on-failure";
                 TimeoutStopSec = "10s";
               };
-
-              restartIfChanged = true;
             };
 
             sops.mirage.placeholder = mapAttrs (
