@@ -116,7 +116,7 @@
             files=()
             while IFS= read -r line; do
               files+=("$line")
-            done < <(${fileFinderScript} /run/current-system)
+            done < <(${fileFinderScript} $system_path)
 
             # Add manually specified files
             ${concatStringsSep "\n" (map (file: "files+=(\"${file}\")") config.sops.mirage.files)}
@@ -182,6 +182,13 @@
 
               file_list="/var/lib/mirage/files"
 
+               # System path
+              system_path="/run/current-system"
+              if [[ ! -e "$system_path" ]]; then
+                rm -f "$file_list"
+                system_path="/nix/var/nix/profiles/system"
+              fi
+
               # Ensure the file exists
               mkdir -p "$(dirname "$file_list")"
               touch "$file_list"
@@ -195,7 +202,7 @@
               # Step 2: Read new files from the fileFinderScript
               while IFS= read -r line; do
                 files+=("$line")
-              done < <(${fileFinderScript} /run/current-system)
+              done < <(${fileFinderScript} $system_path)
 
               # Step 3: Add manually specified files
               ${concatStringsSep "\n" (map (file: "files+=(\"${file}\")") config.sops.mirage.files)}
