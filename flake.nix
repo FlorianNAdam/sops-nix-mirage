@@ -222,7 +222,7 @@
               description = "Watch for NixOS system changes";
               wantedBy = [ "multi-user.target" ];
               pathConfig = {
-                PathChanged = "/run/current-system/activate";
+                PathModified = "/run/current-system/activate";
               };
             };
 
