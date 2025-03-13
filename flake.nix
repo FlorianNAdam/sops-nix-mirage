@@ -233,6 +233,8 @@
               serviceConfig = {
                 Type = "oneshot";
                 ExecStart = "${mirageReloadScript} /run/current-system";
+                StartLimitIntervalSec = 60;
+                StartLimitBurst = 1;
               };
             };
 
