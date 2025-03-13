@@ -106,10 +106,10 @@
 
           mirageReplaceString = "${lib.concatMapStringsSep " " (r: "--replace-exec '" + r + "'") mirageArgs}";
 
-          mirage = "${mirage.defaultPackage.${pkgs.system}}/bin/mirage";
+          mirageBinary = "${mirage.defaultPackage.${pkgs.system}}/bin/mirage";
 
           mirageScript = pkgs.writeShellScript "mirage-dynamic-service" ''
-            ${mirage} --watch-file /var/lib/mirage/files --shell ${pkgs.bash}/bin/sh ${mirageReplaceString} --allow-other
+            ${mirageBinary} --watch-file /var/lib/mirage/files --shell ${pkgs.bash}/bin/sh ${mirageReplaceString} --allow-other
           '';
         in
         {
