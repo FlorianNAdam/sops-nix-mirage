@@ -29,11 +29,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1741898734,
-        "narHash": "sha256-Iekx1HZUrmXpNKxjD1Vsxe57P702mDEmxsUKk5VmVOg=",
+        "lastModified": 1741899256,
+        "narHash": "sha256-TuWvYQYLKSxY/pdqQhk67ep+l+O0SQ5LMWdHs1V+38M=",
         "owner": "FlorianNAdam",
         "repo": "mirage",
-        "rev": "3861925164282357d8ab9c9f8ccf7e161217f0fe",
+        "rev": "ceec637e47295f167c657adfd54d486c1928f9cf",
         "type": "github"
       },
       "original": {
@@ -44,7 +44,10 @@
     },
     "naersk": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": [
+          "mirage",
+          "nixpkgs"
+        ]
       },
       "locked": {
         "lastModified": 1739824009,
@@ -61,19 +64,6 @@
       }
     },
     "nixpkgs": {
-      "locked": {
-        "lastModified": 1737062831,
-        "narHash": "sha256-Tbk1MZbtV2s5aG+iM99U8FqwxU/YNArMcWAv6clcsBc=",
-        "path": "/nix/store/l9nb64iii15y0nr37qrs1cfm6rlpg6gh-source",
-        "rev": "5df43628fdf08d642be8ba5b3625a6c70731c19c",
-        "type": "path"
-      },
-      "original": {
-        "id": "nixpkgs",
-        "type": "indirect"
-      }
-    },
-    "nixpkgs_2": {
       "locked": {
         "lastModified": 1736798957,
         "narHash": "sha256-qwpCtZhSsSNQtK4xYGzMiyEDhkNzOCz/Vfu4oL2ETsQ=",
@@ -93,7 +83,7 @@
       "inputs": {
         "flake-utils": "flake-utils",
         "mirage": "mirage",
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": "nixpkgs"
       }
     },
     "systems": {
