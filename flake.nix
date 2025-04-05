@@ -124,6 +124,7 @@
 
 
             file_list="/var/lib/mirage/files"
+            replace_list="/var/lib/mirage/secrets"
 
             # Remove file on boot
             if [[ ! -e "/run/current-system" ]]; then
@@ -154,14 +155,14 @@
             # Step 5: Write back the sorted, unique list
             printf "%s\n" "''${sorted_unique_files[@]}" > "$file_list"
 
+            # Step 6: Write the replace strings
+            printf "${lib.concatStringsSep "\n" mirageArgs}" > "$replace_list"
           '';
-
-          mirageReplaceString = "${lib.concatMapStringsSep " " (r: "--replace-exec '" + r + "'") mirageArgs}";
 
           mirageBinary = "${mirage.defaultPackage.${pkgs.system}}/bin/mirage";
 
           mirageScript = pkgs.writeShellScript "mirage-dynamic-service" ''
-            ${mirageBinary} --watch-file /var/lib/mirage/files --shell ${pkgs.bash}/bin/sh ${mirageReplaceString} --allow-other
+            ${mirageBinary} --shell ${pkgs.bash}/bin/sh --watch-file /var/lib/mirage/files --replace-exec-file /var/lib/mirage/secrets --allow-other
           '';
         in
         {
