@@ -32,6 +32,10 @@
               }) arionProjects
             )
           );
+          # Create name=ref mappings for image references
+          imageNameRefs = lib.concatStringsSep "\n" (
+            lib.attrsets.mapAttrsToList (name: ref: "${name}=${ref}") config.nirion.images
+          );
           nirionScript = pkgs.writeScriptBin "nirion" ''
             #!/usr/bin/env bash
             set -e
@@ -41,6 +45,75 @@
             while IFS='=' read -r name yaml; do
               PROJECTS["$name"]="$yaml"
             done <<< "${projectMapping}"
+
+            # Handle 'update' command
+            if [[ "$1" == "update" ]]; then
+              shift  # Remove 'update' from arguments
+
+              # Read image name->ref mapping
+              declare -A IMAGE_MAP
+              while IFS='=' read -r name ref; do
+                IMAGE_MAP["$name"]="$ref"
+              done <<< "${imageNameRefs}"
+
+              # Determine images to update
+              if [[ $# -gt 0 ]]; then
+                # Validate provided image names
+                IMAGES_TO_UPDATE=()
+                for name in "$@"; do
+                  if [[ -z "''${IMAGE_MAP[$name]}" ]]; then
+                    echo "Error: Unknown image name '$name'. Available images:"
+                    printf "  - %s\n" "''${!IMAGE_MAP[@]}"
+                    exit 1
+                  fi
+                  IMAGES_TO_UPDATE+=("$name")
+                done
+              else
+                # Update all images
+                IMAGES_TO_UPDATE=("''${!IMAGE_MAP[@]}")
+              fi
+
+              LOCKFILE="${config.nirion.lockFileOutput}"
+
+              # Read existing lockfile
+              declare -A LOCKED
+              if [[ -f "$LOCKFILE" ]]; then
+                while IFS="=" read -r ref digest; do
+                  LOCKED["$ref"]="$digest"
+                done < <(${pkgs.jq}/bin/jq -r 'to_entries|map("\(.key)=\(.value)")|.[]' "$LOCKFILE")
+              fi
+
+              # Update each selected image
+              for NAME in "''${IMAGES_TO_UPDATE[@]}"; do
+                IMAGE="''${IMAGE_MAP[$NAME]}"
+                echo "Resolving digest for $NAME ($IMAGE)"
+                DIGEST=$(${pkgs.skopeo}/bin/skopeo inspect --format "{{.Digest}}" "docker://$IMAGE" || echo "failed")
+                if [[ "$DIGEST" == "failed" ]]; then
+                  echo "Error resolving digest for $IMAGE. Skipping."
+                  continue
+                fi
+                OLD_DIGEST="''${LOCKED[$IMAGE]-}"
+                if [[ -n "$OLD_DIGEST" ]]; then
+                  if [[ "$OLD_DIGEST" != "$DIGEST" ]]; then
+                    echo "Digest changed for $IMAGE: $OLD_DIGEST -> $DIGEST"
+                  fi
+                else
+                  echo "Added digest for $IMAGE: $DIGEST"
+                fi
+                LOCKED["$IMAGE"]="$DIGEST"
+              done
+
+              # Write new lockfile
+              echo "Updating lockfile $LOCKFILE"
+              rm -f "$LOCKFILE.tmp"
+              for ref in "''${!LOCKED[@]}"; do
+                echo "$ref ''${LOCKED[$ref]}" >> "$LOCKFILE.tmp"
+              done
+              ${pkgs.jq}/bin/jq -Rn 'reduce inputs as $line ({}; ($line | split(" ") ) as $parts | . + { ($parts[0]): $parts[1] })' "$LOCKFILE.tmp" > "$LOCKFILE"
+              rm -f "$LOCKFILE.tmp"
+
+              exit 0
+            fi
 
             # Handle 'list' command
             if [[ "$1" == "list" ]]; then
@@ -54,7 +127,8 @@
             # Ensure at least one argument is provided
             if [[ $# -lt 1 ]]; then
               echo "Usage: nirion <command> [options] [project]"
-              echo "       nirion list  # Show available projects"
+              echo "       nirion list          # Show available projects"
+              echo "       nirion update [image...]  # Update lockfile for specified/all images"
               exit 1
             fi
 
@@ -84,6 +158,12 @@
               lockFile = lib.mkOption {
                 type = lib.types.path;
                 description = "Path to image digest lock file";
+              };
+
+              lockFileOutput = lib.mkOption {
+                type = lib.types.str;
+                default = "./nirion-lock.json";
+                description = "Writable output path for lockfile updates";
               };
 
               images = lib.mkOption {
