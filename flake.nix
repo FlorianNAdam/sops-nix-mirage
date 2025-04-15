@@ -34,6 +34,8 @@
           imageNameRefs = lib.concatStringsSep "\n" (
             lib.attrsets.mapAttrsToList (name: ref: "${name}=${ref}") config.nirion.images
           );
+          lockFileOutputStr =
+            if config.nirion.lockFileOutput != null then toString config.nirion.lockFileOutput else "";
           nirionScript = pkgs.writeScriptBin "nirion" ''
             #!/usr/bin/env bash
             set -e
@@ -47,6 +49,12 @@
             # Handle 'update' command
             if [[ "$1" == "update" ]]; then
               shift  # Remove 'update' from arguments
+
+              # Check if lockfile is enabled
+              if [[ -z "${lockFileOutputStr}" ]]; then
+                echo "Error: Lockfile functionality is not enabled (nirion.lockFileOutput is not set)"
+                exit 1
+              fi
 
               # Read image name->ref mapping
               declare -A IMAGE_MAP
@@ -71,7 +79,7 @@
                 IMAGES_TO_UPDATE=("''${!IMAGE_MAP[@]}")
               fi
 
-              LOCKFILE="${config.nirion.lockFileOutput}"
+              LOCKFILE="${lockFileOutputStr}"
 
               # Read existing lockfile
               declare -A LOCKED
@@ -154,13 +162,14 @@
           options = {
             nirion = {
               lockFile = lib.mkOption {
-                type = lib.types.path;
-                description = "Path to image digest lock file";
+                type = lib.types.nullOr lib.types.path;
+                default = null;
+                description = "Optional path to image digest lock file";
               };
               lockFileOutput = lib.mkOption {
-                type = lib.types.str;
-                default = "./nirion-lock.json";
-                description = "Writable output path for lockfile updates";
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Optional writable output path for lockfile updates";
               };
               images = lib.mkOption {
                 type = lib.types.attrsOf lib.types.str;
@@ -179,7 +188,7 @@
           config = {
             nirion.locked-images =
               let
-                lockFile = lib.importJSON (config.nirion.lockFile);
+                lockFile = if config.nirion.lockFile != null then lib.importJSON config.nirion.lockFile else { };
               in
               lib.mapAttrs (
                 name: imageRef:
