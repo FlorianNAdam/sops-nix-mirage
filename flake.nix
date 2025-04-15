@@ -3,7 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -32,7 +31,6 @@
               }) arionProjects
             )
           );
-          # Create name=ref mappings for image references
           imageNameRefs = lib.concatStringsSep "\n" (
             lib.attrsets.mapAttrsToList (name: ref: "${name}=${ref}") config.nirion.images
           );
@@ -78,8 +76,8 @@
               # Read existing lockfile
               declare -A LOCKED
               if [[ -f "$LOCKFILE" ]]; then
-                while IFS="=" read -r ref digest; do
-                  LOCKED["$ref"]="$digest"
+                while IFS="=" read -r key digest; do
+                  LOCKED["$key"]="$digest"
                 done < <(${pkgs.jq}/bin/jq -r 'to_entries|map("\(.key)=\(.value)")|.[]' "$LOCKFILE")
               fi
 
@@ -92,22 +90,22 @@
                   echo "Error resolving digest for $IMAGE. Skipping."
                   continue
                 fi
-                OLD_DIGEST="''${LOCKED[$IMAGE]-}"
+                OLD_DIGEST="''${LOCKED[$NAME]-}"
                 if [[ -n "$OLD_DIGEST" ]]; then
                   if [[ "$OLD_DIGEST" != "$DIGEST" ]]; then
-                    echo "Digest changed for $IMAGE: $OLD_DIGEST -> $DIGEST"
+                    echo "Digest changed for $NAME: $OLD_DIGEST -> $DIGEST"
                   fi
                 else
-                  echo "Added digest for $IMAGE: $DIGEST"
+                  echo "Added digest for $NAME: $DIGEST"
                 fi
-                LOCKED["$IMAGE"]="$DIGEST"
+                LOCKED["$NAME"]="$DIGEST"
               done
 
               # Write new lockfile
               echo "Updating lockfile $LOCKFILE"
               rm -f "$LOCKFILE.tmp"
-              for ref in "''${!LOCKED[@]}"; do
-                echo "$ref ''${LOCKED[$ref]}" >> "$LOCKFILE.tmp"
+              for key in "''${!LOCKED[@]}"; do
+                echo "$key ''${LOCKED[$key]}" >> "$LOCKFILE.tmp"
               done
               ${pkgs.jq}/bin/jq -Rn 'reduce inputs as $line ({}; ($line | split(" ") ) as $parts | . + { ($parts[0]): $parts[1] })' "$LOCKFILE.tmp" > "$LOCKFILE"
               rm -f "$LOCKFILE.tmp"
@@ -159,19 +157,16 @@
                 type = lib.types.path;
                 description = "Path to image digest lock file";
               };
-
               lockFileOutput = lib.mkOption {
                 type = lib.types.str;
                 default = "./nirion-lock.json";
                 description = "Writable output path for lockfile updates";
               };
-
               images = lib.mkOption {
                 type = lib.types.attrsOf lib.types.str;
                 default = { };
                 description = "Image references to be resolved with digests";
               };
-
               locked-images = lib.mkOption {
                 type = lib.types.attrsOf lib.types.str;
                 readOnly = true;
@@ -195,17 +190,15 @@
                   imageRef
                 else
                   let
-                    digest = lockFile.${imageRef} or null;
+                    digest = lockFile.${name} or null;
                   in
                   if digest != null then
                     "${imageRef}@${digest}"
                   else
-                    lib.warn "nirion: Image '${imageRef}' not locked - using mutable tag" imageRef
+                    lib.warn "nirion: Image '${name}' (${imageRef}) not locked - using mutable tag" imageRef
               ) config.nirion.images;
 
-            environment.systemPackages = [
-              nirionScript
-            ];
+            environment.systemPackages = [ nirionScript ];
           };
         };
     };
