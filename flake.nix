@@ -108,6 +108,15 @@
           '';
 
           mirageReloadScript = pkgs.writeShellScript "mirage-reload" ''
+            ensure_file() {
+                local file="$1"
+                if [ ! -e "$file" ] || [ "$(stat -c %U "$file")" != "root" ] || [ "$(stat -c %a "$file")" != "600" ]; then
+                    mkdir -p "$(dirname "$file")"
+                    : > "$file"
+                    chmod 600 "$file"
+                fi
+            }
+
             gen_root="$1"
 
             if [ -z "$gen_root" ]; then
@@ -133,13 +142,8 @@
             fi
 
             # Ensure the file exists
-            mkdir -p "$(dirname "$file_list")"
-            touch "$file_list"
-            chmod 600 "$file_list"
-
-            mkdir -p "$(dirname "$replace_list")"
-            touch "$replace_list"
-            chmod 600 "$replace_list"
+            ensure_file "$file_list"
+            ensure_file "$replace_list"
 
             # Step 1: Read existing files from /var/lib/mirage/files
             files=()
