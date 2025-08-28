@@ -30,14 +30,14 @@
         }:
         with lib;
         let
-          rgCommand = "${pkgs.ripgrep}/bin/rg -L -l --no-messages --glob '!**/etc/nix/**' 'MIRAGE_PLACEHOLDER'";
-          rgCommand2 = "${pkgs.ripgrep}/bin/rg -L -l --hidden --no-messages 'MIRAGE_PLACEHOLDER'";
-
           mirageArgs = mapAttrsToList (
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
           ) config.sops.secrets;
 
           fileFinderScript = pkgs.writeShellScript "mirage-file-finder" ''
+            src="${./.}"
+            cut_src="/nix/store/$(echo $src | cut -c45-)"
+
             gen_root="$1"
 
             if [ -z "$gen_root" ]; then
@@ -54,57 +54,23 @@
              
             echo "searching for files containing a mirage placeholder..." >&2
 
-            files=()
-
-            # Find NixOS files
-            while read -r path; do
-              resolved_path=$(readlink -f "$path")
-              echo "found file: $resolved_path" >&2
-              files+=("$resolved_path")
-
-              # Find matching file in /etc
-              gen_etc="$gen_root"etc/                          
-              if [[ "$path" == "$gen_etc"* ]]; then
-              
-                etc_path="/etc/''${path#$gen_etc}"
-                if [ -f "$etc_path" ]; then
-
-                  # Ignore symlinks from /etc to /nix/store
-                  resolved_etc_path=$(readlink -f "$etc_path")
-                  if [[ "$resolved_etc_path" != /nix/store/* ]]; then
-                    echo "found matching file in /etc: $resolved_etc_path" >&2
-                    files+=("$resolved_etc_path")
-                  fi
-                fi
-              fi
-
-            done < <(${rgCommand} $gen_root)
-
-            # Find Home Manager files
             nix_store="$gen_root"sw/bin/nix-store
-            gen_paths=$($nix_store -qR $gen_root | grep home-manager-generation || true)
 
-            for gen_path in $gen_paths; do
-              echo "found Home Manager generation: $gen_path" >&2
-              while read -r path; do
-                  resolved_path=$(readlink -f "$path")
-                  echo "found file: $resolved_path" >&2
-                  files+=("$resolved_path")
-              done < <(${rgCommand2} $gen_path)
-            done
+            # Find all requisites of gen_root
+            store_paths=$($nix_store --query --requisites "$gen_root" | xargs readlink -f | grep -vE '^/nix/store/.*-source' | sort -u)
 
-            # Deduplicate files
-            declare -A seen
-            unique_files=()
+            # Find files
+            resolved_files=$(
+              printf '%s\0' $store_paths \
+              | xargs -0 -n 200 /nix/store/1ijacjhy42pqx7vfi5mnsqrps2k3b8xf-ripgrep-14.1.1/bin/rg \
+                  "MIRAGE_PLACEHOLDER" -l --hidden --no-messages -g '!*.nix' -g '!*-source/**/*' \
+              | xargs readlink -f | sort -u
+            )
 
-            for file in "''${files[@]}"; do
-              if [[ -z "''${seen[$file]}" ]]; then
-                unique_files+=("$file")
-                seen["$file"]=1
-              fi
-            done
+            # Filter out mirage source files and mirage scripts
+            filtered_files=$(echo "$resolved_files" | grep -vE '(^/nix/store/.*-mirage-reload$|^/nix/store/.*-mirage-file-finder$|\.nix$|^'"$0"'$|^'"$src"'|^'"$cut_src"')')
 
-            printf "%s\n" "''${unique_files[@]}"
+            echo "$filtered_files"
           '';
 
           mirageReloadScript = pkgs.writeShellScript "mirage-reload" ''
