@@ -129,11 +129,17 @@
             # Remove file on boot
             if [[ ! -e "/run/current-system" ]]; then
               rm -f "$file_list"
+              rm -f "$replace_list"
             fi
 
             # Ensure the file exists
             mkdir -p "$(dirname "$file_list")"
             touch "$file_list"
+            chmod 600 "$file_list"
+
+            mkdir -p "$(dirname "$replace_list")"
+            touch "$replace_list"
+            chmod 600 "$replace_list"
 
             # Step 1: Read existing files from /var/lib/mirage/files
             files=()
