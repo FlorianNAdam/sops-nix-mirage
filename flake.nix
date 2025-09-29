@@ -35,6 +35,8 @@
           ) config.sops.secrets;
 
           fileFinderScript = pkgs.writeShellScript "mirage-file-finder" ''
+            set -euo pipefail
+
             src="${./.}"
             cut_src="/nix/store/$(echo $src | cut -c45-)"
 
@@ -74,6 +76,8 @@
           '';
 
           mirageReloadScript = pkgs.writeShellScript "mirage-reload" ''
+            set -euo pipefail
+
             ensure_file() {
                 local file="$1"
                 if [ ! -e "$file" ] || [ "$(stat -c %U "$file")" != "root" ] || [ "$(stat -c %a "$file")" != "600" ]; then
