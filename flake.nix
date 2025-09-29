@@ -78,6 +78,11 @@
           mirageReloadScript = pkgs.writeShellScript "mirage-reload" ''
             set -euo pipefail
 
+            if [ "$EUID" -ne 0 ]; then
+              echo "error: this script must be run as root" >&2
+              exit 1
+            fi
+
             ensure_file() {
                 local file="$1"
                 if [ ! -e "$file" ] || [ "$(stat -c %U "$file")" != "root" ] || [ "$(stat -c %a "$file")" != "600" ]; then
@@ -90,12 +95,12 @@
             gen_root="$1"
 
             if [ -z "$gen_root" ]; then
-                echo "usage: $0 gen_root"
+                echo "usage: $0 gen_root" >&2
                 exit 1
             fi
 
             if [ ! -d "$gen_root" ]; then
-                echo "error: '$gen_root' is not a valid directory."
+                echo "error: '$gen_root' is not a valid directory." >&2
                 exit 1
             fi
 
