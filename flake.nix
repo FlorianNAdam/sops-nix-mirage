@@ -35,8 +35,6 @@
           ) config.sops.secrets;
 
           fileFinderScript = pkgs.writeShellScript "mirage-file-finder" ''
-            set -euo pipefail
-
             src="${./.}"
             cut_src="/nix/store/$(echo $src | cut -c45-)"
 
@@ -76,8 +74,6 @@
           '';
 
           mirageReloadScript = pkgs.writeShellScript "mirage-reload" ''
-            set -euo pipefail
-
             if [ "$EUID" -ne 0 ]; then
               echo "error: this script must be run as root" >&2
               exit 1
