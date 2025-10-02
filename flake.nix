@@ -34,6 +34,33 @@
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
           ) config.sops.secrets;
 
+          util = pkgs.writeShellScript "mirage-util" ''
+            ensure_root() {
+              if [ "$EUID" -ne 0 ]; then
+                echo "error: this script must be run as root" >&2
+                exit 1
+              fi
+            }
+
+            ensure_file() {
+                local file="$1"
+                if [ ! -e "$file" ] || [ "$(stat -c %U "$file")" != "root" ] || [ "$(stat -c %a "$file")" != "600" ]; then
+                    mkdir -p "$(dirname "$file")"
+                    : > "$file"
+                    chmod 600 "$file"
+                fi
+            }
+
+            ensure_dir() {
+                local dir="$1"
+                if [ ! -d "$dir" ] || [ "$(stat -c %U "$dir")" != "root" ] || [ "$(stat -c %a "$dir")" != "700" ]; then
+                    rm -rf "$dir"
+                    mkdir -p "$dir"
+                    chmod 700 "$dir"
+                fi
+            }
+          '';
+
           fileFinderScript = pkgs.writeShellScript "mirage-file-finder" ''
             src="${./.}"
             cut_src="/nix/store/$(echo $src | cut -c45-)"
@@ -62,7 +89,7 @@
             # Find files
             resolved_files=$(
               printf '%s\0' $store_paths \
-              | xargs -0 -n 200 /nix/store/1ijacjhy42pqx7vfi5mnsqrps2k3b8xf-ripgrep-14.1.1/bin/rg \
+              | xargs -0 -n 200 ${pkgs.ripgrep}/bin/rg \
                   "MIRAGE_PLACEHOLDER" -l --hidden --no-messages -g '!*.nix' -g '!*-source/**/*' \
               | xargs readlink -f | sort -u
             )
@@ -74,19 +101,8 @@
           '';
 
           mirageReloadScript = pkgs.writeShellScript "mirage-reload" ''
-            if [ "$EUID" -ne 0 ]; then
-              echo "error: this script must be run as root" >&2
-              exit 1
-            fi
-
-            ensure_file() {
-                local file="$1"
-                if [ ! -e "$file" ] || [ "$(stat -c %U "$file")" != "root" ] || [ "$(stat -c %a "$file")" != "600" ]; then
-                    mkdir -p "$(dirname "$file")"
-                    : > "$file"
-                    chmod 600 "$file"
-                fi
-            }
+            source ${util}
+            ensure_root
 
             gen_root="$1"
 
