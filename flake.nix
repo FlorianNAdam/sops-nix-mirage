@@ -110,6 +110,20 @@
             echo "$filtered_files"
           '';
 
+          cacheCmd =
+            let
+              inherit (config.sops.mirage) cache;
+            in
+            lib.strings.optionalString cache.enable (
+              concatStringsSep " " [
+                "${pkgs.bkt}/bin/bkt"
+                "--discard-failures"
+                "--cache-dir $cache_dir"
+                "--ttl=${cache.ttl}"
+                "--"
+              ]
+            );
+
           mirageReloadScript = pkgs.writeShellScript "mirage-reload" ''
             source ${util}
             ensure_root
@@ -131,6 +145,7 @@
 
             file_list="/var/lib/mirage/files"
             replace_list="/var/lib/mirage/secrets"
+            cache_dir="/var/lib/mirage/cache"
 
             # Remove file on boot
             if [[ ! -e "/run/current-system" ]]; then
@@ -141,6 +156,7 @@
             # Ensure the file exists
             ensure_file "$file_list"
             ensure_file "$replace_list"
+            ensure_dir "$cache_dir"
 
             # Step 1: Read existing files from /var/lib/mirage/files
             files=()
@@ -151,7 +167,7 @@
             # Step 2: Read new files from the fileFinderScript
             while IFS= read -r line; do
               files+=("$line")
-            done < <(${fileFinderScript} $gen_root)
+            done < <(${cacheCmd} ${fileFinderScript} $(readlink -f $gen_root))
 
             # Step 3: Add manually specified files
             ${concatStringsSep "\n" (map (file: "files+=(\"${file}\")") config.sops.mirage.files)}
@@ -183,6 +199,20 @@
           options.sops.mirage = {
             enable = mkEnableOption "Enable the sops mirage service";
 
+            cache = {
+              enable = mkOption {
+                type = types.bool;
+                default = true;
+                description = "Enable cache for faster system startup";
+              };
+
+              ttl = mkOption {
+                type = types.str;
+                default = "1M";
+                description = "Duration the cached results will be valid for";
+              };
+            };
+
             files = mkOption {
               type = with types; listOf str;
               default = [ ];
@@ -205,8 +235,15 @@
 
           config = mkIf config.sops.mirage.enable {
             environment.systemPackages = [
-              (pkgs.writeShellScriptBin "mirage-file-finder" ''"${fileFinderScript}" "$@"'')
-              (pkgs.writeShellScriptBin "mirage-reload" ''"${mirageReloadScript}" "$@"'')
+              (pkgs.stdenv.mkDerivation {
+                name = "mirage-debug-scripts";
+                phases = [ "installPhase" ];
+                installPhase = ''
+                  mkdir -p $out/bin
+                  ln -s ${fileFinderScript} $out/bin/mirage-file-finder
+                  ln -s ${mirageReloadScript} $out/bin/mirage-reload
+                '';
+              })
             ];
 
             system.activationScripts.myScript = ''
