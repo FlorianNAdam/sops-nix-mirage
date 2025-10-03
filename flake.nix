@@ -34,6 +34,16 @@
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
           ) config.sops.secrets;
 
+          mirage-ripgrep = pkgs.stdenv.mkDerivation {
+            name = "mirage-rg";
+            src = pkgs.ripgrep;
+
+            installPhase = ''
+              mkdir -p $out/bin
+              cp $src/bin/rg $out/bin/rg
+            '';
+          };
+
           util = pkgs.writeShellScript "mirage-util" ''
             ensure_root() {
               if [ "$EUID" -ne 0 ]; then
@@ -89,7 +99,7 @@
             # Find files
             resolved_files=$(
               printf '%s\0' $store_paths \
-              | xargs -0 -n 200 ${pkgs.ripgrep}/bin/rg \
+              | xargs -0 -n 200 ${mirage-ripgrep}/bin/rg \
                   "MIRAGE_PLACEHOLDER" -l --hidden --no-messages -g '!*.nix' -g '!*-source/**/*' \
               | xargs readlink -f | sort -u
             )
@@ -158,9 +168,16 @@
 
           mirageBinary = "${mirage.defaultPackage.${pkgs.system}}/bin/mirage";
 
-          mirageScript = pkgs.writeShellScript "mirage-dynamic-service" ''
-            ${mirageBinary} --shell ${pkgs.bash}/bin/sh --watch-file /var/lib/mirage/files --replace-exec-file /var/lib/mirage/secrets --allow-other
-          '';
+          mirageScript = pkgs.writeShellScript "mirage-dynamic-service" (
+            concatStringsSep " " [
+              "${mirageBinary}"
+              "--shell ${pkgs.bash}/bin/sh"
+              "--watch-file /var/lib/mirage/files"
+              "--replace-exec-file /var/lib/mirage/secrets"
+              "--exclude-exe ${mirage-ripgrep}/bin/rg"
+              "--allow-other"
+            ]
+          );
         in
         {
           options.sops.mirage = {
