@@ -30,9 +30,27 @@
         }:
         with lib;
         let
-          mirageArgs = mapAttrsToList (
+          mirageSystemSecretsMap = mapAttrsToList (
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
           ) config.sops.secrets;
+
+          mirageUserSecretsMap =
+            if builtins.hasAttr "home-manager" config then
+              builtins.concatLists (
+                lib.mapAttrsToList (
+                  _: userConfig:
+                  if builtins.hasAttr "sops" userConfig then
+                    lib.mapAttrsToList (
+                      name: secret: "${userConfig.sops.mirage.placeholder.${name}}=cat ${secret.path}"
+                    ) userConfig.sops.secrets
+                  else
+                    [ ]
+                ) config.home-manager.users
+              )
+            else
+              [ ];
+
+          mirageSecretsMap = mirageSystemSecretsMap ++ mirageUserSecretsMap;
 
           mirage-ripgrep = pkgs.stdenv.mkDerivation {
             name = "mirage-rg";
@@ -179,7 +197,7 @@
             printf "%s\n" "''${sorted_unique_files[@]}" > "$file_list"
 
             # Step 6: Write the replace strings
-            printf "${lib.concatStringsSep "\n" mirageArgs}" > "$replace_list"
+            printf "${lib.concatStringsSep "\n" mirageSecretsMap}" > "$replace_list"
           '';
 
           mirageBinary = "${mirage.defaultPackage.${pkgs.system}}/bin/mirage";
@@ -319,7 +337,8 @@
 
           config = {
             sops.mirage.placeholder = mapAttrs (
-              name: _: mkDefault "<MIRAGE:${builtins.hashString "sha256" name}:MIRAGE_PLACEHOLDER>"
+              name: _:
+              mkDefault "<MIRAGE_USER:${config.home.username}:${builtins.hashString "sha256" name}:MIRAGE_PLACEHOLDER>"
             ) config.sops.secrets;
           };
         };
