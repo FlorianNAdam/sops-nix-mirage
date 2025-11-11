@@ -30,6 +30,8 @@
         }:
         with lib;
         let
+          system = pkgs.stdenv.hostPlatform.system;
+
           mirageSystemSecretsMap = mapAttrsToList (
             name: value: "${config.sops.mirage.placeholder.${name}}=cat ${value.path}"
           ) config.sops.secrets;
@@ -200,7 +202,7 @@
             printf "${lib.concatStringsSep "\n" mirageSecretsMap}" > "$replace_list"
           '';
 
-          mirageBinary = "${mirage.defaultPackage.${pkgs.system}}/bin/mirage";
+          mirageBinary = "${mirage.defaultPackage.${system}}/bin/mirage";
 
           mirageScript = pkgs.writeShellScript "mirage-dynamic-service" (
             concatStringsSep " " [
