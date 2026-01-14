@@ -1,8 +1,8 @@
 # sops-nix-mirage
 
-**sops-nix-mirage** is a NixOS and Home Manager module that extends [sops-nix](https://github.com/Mic92/sops-nix) by enabling **Mirage placeholders** in **any file in the Nix store**. It allows you to inject secrets from `sops-nix` into arbitrary files, dynamically replacing placeholders at runtime using a FUSE filesystem.  
+**sops-nix-mirage** is a NixOS and Home Manager module that extends [sops-nix](https://github.com/Mic92/sops-nix) by enabling **Sops placeholders** in **any file in the Nix store**. It allows you to inject secrets from `sops-nix` into arbitrary files, dynamically replacing placeholders at runtime using a FUSE filesystem.  
 
-This provides more flexibility than standard `sops-nix`, which only overlays configuration files: you can now inject secrets into **any build artifact or system file** managed by Nix.
+This provides even flexibility than standard `sops-nix`, which only overlays configuration files: you can now inject secrets into **any build artifact or system file** managed by Nix.
 
 ---
 
@@ -68,7 +68,7 @@ environment.etc."my-app.conf".text = ''
 '';
 
 pkgs.writeText "secret-file" ''
-  password = ${config.sops.mirage.placeholder.db_password}
+  password = ${config.sops.mirage.placeholder.my_secret}
 '';
 
 environment.sessionVariables = {
